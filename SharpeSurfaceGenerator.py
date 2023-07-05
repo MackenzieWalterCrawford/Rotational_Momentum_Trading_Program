@@ -180,11 +180,11 @@ class SharpeSurfaceGenerator:
             # repeat with detrended prices
             dfPLog = detrend_df.apply(np.log)
             dfPLogShift = dfPLog.shift(1)
-            dfDetrendRR = dfPLog.subtract(dfPLogShift, fill_value=0)
+            detrend_results_df = dfPLog.subtract(dfPLogShift, fill_value=0)
 
         else:
             results_df = self.adj_close_df.pct_change()
-            dfDetrendRR = detrend_df.pct_change()
+            detrend_results_df = detrend_df.pct_change()
 
         # T is the dataframe where the trading day is calculated.
 
@@ -242,33 +242,33 @@ class SharpeSurfaceGenerator:
                 self.Delay
             )
 
-            dfDetrendRR[returns] = dfDetrendRR[col] * results_df[num_long].shift(
+            detrend_results_df[returns] = detrend_results_df[col] * results_df[num_long].shift(
                 self.Delay
             )
 
         results_df = results_df.assign(ALL_R=pd.Series(np.zeros(rows)).values)
 
-        dfDetrendRR = dfDetrendRR.assign(ALL_R=pd.Series(np.zeros(rows)).values)
+        detrend_results_df = detrend_results_df.assign(ALL_R=pd.Series(np.zeros(rows)).values)
 
         # columns = self.close_price_df.shape[1]
         for col in self.close_price_df.columns:
             results_df["ALL_R"] = results_df["ALL_R"] + results_df[col + "_R"]
             # repeat for detrended returns
-            dfDetrendRR["ALL_R"] = dfDetrendRR["ALL_R"] + dfDetrendRR[col + "_R"]
+            detrend_results_df["ALL_R"] = detrend_results_df["ALL_R"] + detrend_results_df[col + "_R"]
 
-        results_df = results_df.assign(DETREND_ALL_R=dfDetrendRR["ALL_R"])
+        results_df = results_df.assign(DETREND_ALL_R=detrend_results_df["ALL_R"])
 
         results_df = results_df.assign(
             I=np.cumprod(1 + results_df["ALL_R"])
         )  # this is good for pct return or log return
         results_df.iat[0, results_df.columns.get_loc("I")] = 1
         # repeat for detrended returns
-        dfDetrendRR = dfDetrendRR.assign(
-            I=np.cumprod(1 + dfDetrendRR["ALL_R"])
+        detrend_results_df = detrend_results_df.assign(
+            I=np.cumprod(1 + detrend_results_df["ALL_R"])
         )  # this is good for pct return or log return
-        dfDetrendRR.iat[0, dfDetrendRR.columns.get_loc("I")] = 1
+        detrend_results_df.iat[0, detrend_results_df.columns.get_loc("I")] = 1
 
-        results_df = results_df.assign(DETREND_I=dfDetrendRR["I"])
+        results_df = results_df.assign(DETREND_I=detrend_results_df["I"])
 
         try:
             sharpe = (

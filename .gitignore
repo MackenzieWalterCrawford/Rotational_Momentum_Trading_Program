@@ -1,0 +1,6 @@
+*.crc
+*.csv
+*.csv.gz
+*.xls*
+*.parquet
+

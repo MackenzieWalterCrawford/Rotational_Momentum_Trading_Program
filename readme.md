@@ -24,6 +24,11 @@ Now to make the portfolio less volatile we will add Bonds as well, and do the sa
 US bond ETFs = ["BIL", "TIP", "IEI", "IEF", "TLH", "TLT", "SHY"]
 Canadian bond ETFs = ["VSC.TO", "VSB.TO", "ZIC.TO", "HBB.TO", "TDB.TO", "XBB.TO", "XGB.TO"]
 
+***NOTE***
+The order of the ETFs is important. Keeping the safest ETF as the last in the list is important to use the cash filter or reversion trading. 
+
+
+
 #Sharpe Ratio Surface
 So there is a caviat to the lookback and holding period. That is, that 15 days is not always the best holding period and 3 months is not alwas 
 
@@ -33,6 +38,7 @@ So there is a caviat to the lookback and holding period. That is, that 15 days i
 
 1. Download data from yahoo finance
     - Run the DataIngestor object to get the data
+    - Use at least 5 years of historical data
 
 2. Run the SharpeSurfaceGenerator and choose the best holding and lookback periods
 

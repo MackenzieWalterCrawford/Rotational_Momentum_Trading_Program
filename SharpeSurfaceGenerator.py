@@ -16,6 +16,8 @@ class SharpeSurfaceGenerator:
         self,
         close_price_df: pd.DataFrame,
         adj_close_df: pd.DataFrame,
+        plot_portfolio_graph: bool = False,
+        print_portfolio_details: bool = False,
     ):
         self.logReturns = 0
         self.momentum = 1
@@ -31,9 +33,11 @@ class SharpeSurfaceGenerator:
         self.step_holding = 1
         self.max_lookback = 12
         self.step_lookback = 5
+        self.plot_portfolio_graph = plot_portfolio_graph
+        self.print_portfolio_details = print_portfolio_details
 
-        self.close_price_df = close_price_df.sort_values(by="Date").set_index("Date")
-        self.adj_close_df = adj_close_df.sort_values(by="Date").set_index("Date")
+        self.close_price_df = close_price_df.sort_values(by="Date")
+        self.adj_close_df = adj_close_df.sort_values(by="Date")
         self.sharpe_surface_df = pd.DataFrame(columns=["lookback", "holding", "sharpe"])
         self.sharpe_matrix = np.zeros(shape=(self.max_lookback, self.max_holding))
 
@@ -242,19 +246,23 @@ class SharpeSurfaceGenerator:
                 self.Delay
             )
 
-            detrend_results_df[returns] = detrend_results_df[col] * results_df[num_long].shift(
-                self.Delay
-            )
+            detrend_results_df[returns] = detrend_results_df[col] * results_df[
+                num_long
+            ].shift(self.Delay)
 
         results_df = results_df.assign(ALL_R=pd.Series(np.zeros(rows)).values)
 
-        detrend_results_df = detrend_results_df.assign(ALL_R=pd.Series(np.zeros(rows)).values)
+        detrend_results_df = detrend_results_df.assign(
+            ALL_R=pd.Series(np.zeros(rows)).values
+        )
 
         # columns = self.close_price_df.shape[1]
         for col in self.close_price_df.columns:
             results_df["ALL_R"] = results_df["ALL_R"] + results_df[col + "_R"]
             # repeat for detrended returns
-            detrend_results_df["ALL_R"] = detrend_results_df["ALL_R"] + detrend_results_df[col + "_R"]
+            detrend_results_df["ALL_R"] = (
+                detrend_results_df["ALL_R"] + detrend_results_df[col + "_R"]
+            )
 
         results_df = results_df.assign(DETREND_ALL_R=detrend_results_df["ALL_R"])
 
@@ -277,10 +285,11 @@ class SharpeSurfaceGenerator:
         except ZeroDivisionError:
             sharpe = 0.0
 
-        style.use("fivethirtyeight")
-        results_df["I"].plot()
-        plt.legend()
-        plt.show()
+        if self.plot_portfolio_graph:
+            style.use("fivethirtyeight")
+            results_df["I"].plot()
+            plt.legend()
+            plt.show()
 
         start = 1
         start_val = start
@@ -300,9 +309,10 @@ class SharpeSurfaceGenerator:
             ((float(end_val) / float(start_val)) ** (1 / (days / 350.0))).real - 1, 4
         )  # when raised to an exponent I am getting a complex number, I need only the real part
 
-        print("TotaAnnReturn = %f" % (TotaAnnReturn * 100))
-        print("CAGR = %f" % (CAGR * 100))
-        print("Sharpe Ratio = %f" % (round(sharpe, 2)))
+        if self.print_portfolio_details:
+            print("TotaAnnReturn = %f" % (TotaAnnReturn * 100))
+            print("CAGR = %f" % (CAGR * 100))
+            print("Sharpe Ratio = %f" % (round(sharpe, 2)))
 
         # Detrending Prices and Returns
         WhiteRealityCheckFor1.bootstrap(results_df["DETREND_ALL_R"])
@@ -333,6 +343,8 @@ class SharpeSurfaceGenerator:
                 i += 1
 
     def plot_sharpe_surface(self):
+        self.generate_sharpe_matrix()
+
         fig = plt.figure()
         ax = fig.add_subplot(projection="3d")
         ax.view_init(90, 0)

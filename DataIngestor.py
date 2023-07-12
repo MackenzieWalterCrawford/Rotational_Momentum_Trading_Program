@@ -3,24 +3,33 @@ import pandas as pd
 # pd.core.common.is_list_like = pd.api.types.is_list_like #datareader problem probably fixed in next version of datareader
 from pandas_datareader import data as pdr
 from datetime import datetime
-from util import *
 import yfinance as yf
 
 yf.pdr_override()
 
 
 class DataIngestor:
-    def __init__(self, stock_list: list, start_date: datetime, end_date: datetime):
+    def __init__(
+        self,
+        stock_list: list,
+        start_date: datetime,
+        end_date: datetime,
+        output_folder: str = "Results/",
+    ):
         self.stock_list = stock_list
         self.start_date = start_date
         self.end_date = end_date
         self.filename_list = []
+        self.output_folder = output_folder
         self.df_adj_close = pd.DataFrame()
         self.df_close = pd.DataFrame()
 
         for close_adj in [True, False]:
             self._df = pd.DataFrame()
             self.load_yahoo_data(close_adj)
+
+    def close_df_adj_close_df(self):
+        return self.df_close, self.df_adj_close
 
     def load_yahoo_data(self, adjusted_close: bool):
         """
@@ -67,7 +76,7 @@ class DataIngestor:
         else:
             file_name = file_name + ".csv"
 
-        self._df.to_csv(file_name)
+        self._df.to_csv(self.output_folder + file_name)
 
     def standardize_data(self, df: pd.DataFrame):
         for col in df.columns:

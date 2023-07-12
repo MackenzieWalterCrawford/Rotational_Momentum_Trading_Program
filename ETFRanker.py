@@ -12,6 +12,8 @@ import yfinance as yf
 
 yf.pdr_override()
 
+class ETFRanker:
+    def __init__()
 
 def getDate(dt):
     if type(dt) != str:
@@ -24,24 +26,6 @@ def getDate(dt):
     else:
         return datetime_object
 
-
-# All COLUMN_NAMES are capitalized
-# IMPORTANT: ALL ETF LISTS  MUST END WITH SHY (or equivalent) ETF (=rightmost column of the dataframe)
-# SHY equivalent = a bond ETF
-# dfP are the prices, used for the calculation of trading signals
-# dfAP are the adjusted prices, used for the calculation of portfolio returns
-
-dfP = pd.read_csv(
-    "VSC.TO.VSB.TO.ZIC.TO.HBB.TO.TDB.TO.XBB.TO.XGB.TO.csv", parse_dates=["Date"]
-)
-dfAP = pd.read_csv(
-    "VSC.TO.VSB.TO.ZIC.TO.HBB.TO.TDB.TO.XBB.TO.XGB.TO_AP.csv", parse_dates=["Date"]
-)
-
-dfP = dfP.sort_values(by="Date")
-dfAP = dfAP.sort_values(by="Date")
-dfP.set_index("Date", inplace=True)
-dfAP.set_index("Date", inplace=True)
 
 # logReturns = 1 means log returns will be used in the calculation of portfolio returns, 0 means pct_changes
 # Aperiods = lookback, determines what counts as the short term period, 20 days is the Default setting
@@ -154,18 +138,18 @@ rows = dfA_ranks.shape[0]
 # this loop takes each row of the A dataframe, puts the row into an array,
 # within the array the contents are ranked,
 # then the ranks are placed into the A_ranks dataframe one by one
-for row in range(rows):
-    arr_row = dfA.iloc[row].values
-    if momentum == 1:
-        temp = arr_row.argsort()  # sort momentum, best is ETF with largest return
-    else:
-        temp = (-arr_row).argsort()[
-            : arr_row.size
-        ]  # sort reversion, best is ETF with lowest return
-    ranks = np.empty_like(temp)
-    ranks[temp] = np.arange(1, len(arr_row) + 1)
-    for column in range(columns):
-        dfA_ranks.iat[row, column] = ranks[column]
+
+arr_row = dfA.iloc[-1].values
+if momentum == 1:
+    temp = arr_row.argsort()  # sort momentum, best is ETF with largest return
+else:
+    temp = (-arr_row).argsort()[
+        : arr_row.size
+    ]  # sort reversion, best is ETF with lowest return
+ranks = np.empty_like(temp)
+ranks[temp] = np.arange(1, len(arr_row) + 1)
+for column in range(columns):
+    dfA_ranks.iat[-1, column] = ranks[column]
 
 dfB_ranks = dfP.copy(deep=True)
 dfB_ranks[:] = 0
@@ -176,16 +160,16 @@ rows = dfB_ranks.shape[0]
 # this loop takes each row of the B dataframe, puts the row into an array,
 # within the array the contents are ranked,
 # then the ranks are placed into the B_ranks dataframe one by one
-for row in range(rows):
-    arr_row = dfB.iloc[row].values
-    if momentum == 1:
-        temp = arr_row.argsort()  # sort momentum
-    else:
-        temp = (-arr_row).argsort()[: arr_row.size]  # sort reversion
-    ranks = np.empty_like(temp)
-    ranks[temp] = np.arange(1, len(arr_row) + 1)
-    for column in range(columns):
-        dfB_ranks.iat[row, column] = ranks[column]
+
+arr_row = dfB.iloc[-1].values
+if momentum == 1:
+    temp = arr_row.argsort()  # sort momentum
+else:
+    temp = (-arr_row).argsort()[: arr_row.size]  # sort reversion
+ranks = np.empty_like(temp)
+ranks[temp] = np.arange(1, len(arr_row) + 1)
+for column in range(columns):
+    dfB_ranks.iat[-1, column] = ranks[column]
 
 dfS_ranks = dfP.copy(deep=True)
 dfS_ranks[:] = 0
@@ -364,38 +348,5 @@ try:
 except ZeroDivisionError:
     sharpe = 0.0
 
-style.use("fivethirtyeight")
-dfPRR["I"].plot()
-plt.legend()
-plt.show()
-# plt.savefig(r'Results\%s.png' %(title))
-# plt.close()
 
-start = 1
-start_val = start
-end_val = dfPRR["I"].iat[-1]
-
-
-start_date = getDate(dfPRR.iloc[0].name)
-end_date = getDate(dfPRR.iloc[-1].name)
-days = (end_date - start_date).days
-
-TotaAnnReturn = (end_val - start_val) / start_val / (days / 360)
-TotaAnnReturn_trading = (end_val - start_val) / start_val / (days / 252)
-
-CAGR_trading = round(
-    ((float(end_val) / float(start_val)) ** (1 / (days / 252.0))).real - 1, 4
-)  # when raised to an exponent I am getting a complex number, I need only the real part
-CAGR = round(
-    ((float(end_val) / float(start_val)) ** (1 / (days / 350.0))).real - 1, 4
-)  # when raised to an exponent I am getting a complex number, I need only the real part
-
-print("TotaAnnReturn = %f" % (TotaAnnReturn * 100))
-print("CAGR = %f" % (CAGR * 100))
-print("Sharpe Ratio = %f" % (round(sharpe, 2)))
-
-
-# Detrending Prices and Returns
-WhiteRealityCheckFor1.bootstrap(dfPRR["DETREND_ALL_R"])
-
-dfPRR.to_csv(r"Results\dfPRR.csv", header=True, index=True, encoding="utf-8")
+dfPRR.tail()

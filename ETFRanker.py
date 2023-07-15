@@ -52,24 +52,57 @@ class ETFRanker:
         else:
             return datetime_object
 
+    def rank_dataframe(self, df_to_rank: pd.DataFrame):
+        """
+        args:
+            df_to_rank (pd.DataFrame):
+
+        Returns:
+            ranks (pd.DataFrame): ranked DF
+
+        """
+        # Ranking each ETF w.r.t. short moving average of returns
+        ranks = self.close_price_df.copy(deep=True)
+        ranks[:] = 0
+
+        columns = ranks.shape[1]
+
+        # this loop takes each row of the A dataframe, puts the row into an array,
+        # within the array the contents are ranked,
+        # then the ranks are placed into the A_ranks dataframe one by one
+
+        arr_row = df_to_rank.iloc[-1].values
+        if self.momentum == 1:
+            temp = arr_row.argsort()  # sort momentum, best is ETF with largest return
+        else:
+            temp = (-arr_row).argsort()[
+                : arr_row.size
+            ]  # sort reversion, best is ETF with lowest return
+        ranks = np.empty_like(temp)
+        ranks[temp] = np.arange(1, len(arr_row) + 1)
+        for column in range(columns):
+            ranks.iat[-1, column] = ranks[column]
+
+        return ranks
+
     def rank_etfs(self):
         # lookbacks for longer term period and volatily
         Bperiods = 3 * self.Aperiods + ((3 * self.Aperiods) // 20) * 2  # 66 Default
         Speriods = self.Aperiods  # 20 Default
 
-        # dfA contains a short moving average of the daily percent changes, calculated for each ETF
-        # dfB contains a long moving average of the daily percent changes, calculated for each ETF
-        # dfS contains the annualized volatility, calculated for each ETF
+        # short_MA contains a short moving average of the daily percent changes, calculated for each ETF
+        # long_MA contains a long moving average of the daily percent changes, calculated for each ETF
+        # ann_volatility contains the annualized volatility, calculated for each ETF
         # dfMA contains 200 MA of price
         # dfDetrend contains the detrended AP prices (for White's reality test)
 
-        dfA = self.close_price_df.drop(
+        short_MA = self.close_price_df.drop(
             labels=None, axis=1, columns=self.close_price_df.columns
         )
-        dfB = self.close_price_df.drop(
+        long_MA = self.close_price_df.drop(
             labels=None, axis=1, columns=self.close_price_df.columns
         )
-        dfS = self.close_price_df.drop(
+        ann_volatility = self.close_price_df.drop(
             labels=None, axis=1, columns=self.close_price_df.columns
         )
         dfZ = self.close_price_df.drop(
@@ -78,16 +111,13 @@ class ETFRanker:
         dfMA = self.close_price_df.drop(
             labels=None, axis=1, columns=self.close_price_df.columns
         )
-        dfDetrend = self.close_price_df.drop(
-            labels=None, axis=1, columns=self.close_price_df.columns
-        )
 
         # calculating the three performance measures in accordance with their windows
 
-        dfA = self.close_price_df.pct_change(
+        short_MA = self.close_price_df.pct_change(
             periods=self.Aperiods - 1, fill_method="pad", limit=None, freq=None
         )  # is counting window from 0
-        dfB = self.close_price_df.pct_change(
+        long_MA = self.close_price_df.pct_change(
             periods=Bperiods - 1, fill_method="pad", limit=None, freq=None
         )  # is counting window from 0
         dfR = self.close_price_df.pct_change(
@@ -96,7 +126,7 @@ class ETFRanker:
 
         columns = self.close_price_df.shape[1]
         for column in range(columns):
-            dfS[self.close_price_df.columns[column]] = (
+            ann_volatility[self.close_price_df.columns[column]] = (
                 dfR[self.close_price_df.columns[column]].rolling(window=Speriods).std()
             ) * math.sqrt(252)
             dfZ[self.close_price_df.columns[column]] = (
@@ -112,88 +142,29 @@ class ETFRanker:
                 .rolling(window=self.MAperiods)
                 .mean()
             )
-            dfDetrend[self.adj_close_df.columns[column]] = detrendPrice.detrendPrice(
-                self.adj_close_df[self.adj_close_df.columns[column]]
-            ).values
 
         # Ranking each ETF w.r.t. short moving average of returns
-        dfA_ranks = self.close_price_df.copy(deep=True)
-        dfA_ranks[:] = 0
+        short_MA_ranks = self.rank_dataframe(short_MA)
 
-        columns = dfA_ranks.shape[1]
+        long_MA_ranks = self.rank_dataframe(long_MA)
 
-        # this loop takes each row of the A dataframe, puts the row into an array,
-        # within the array the contents are ranked,
-        # then the ranks are placed into the A_ranks dataframe one by one
-
-        arr_row = dfA.iloc[-1].values
-        if self.momentum == 1:
-            temp = arr_row.argsort()  # sort momentum, best is ETF with largest return
-        else:
-            temp = (-arr_row).argsort()[
-                : arr_row.size
-            ]  # sort reversion, best is ETF with lowest return
-        ranks = np.empty_like(temp)
-        ranks[temp] = np.arange(1, len(arr_row) + 1)
-        for column in range(columns):
-            dfA_ranks.iat[-1, column] = ranks[column]
-
-        dfB_ranks = self.close_price_df.copy(deep=True)
-        dfB_ranks[:] = 0
-
-        columns = dfB_ranks.shape[1]
-        rows = dfB_ranks.shape[0]
-
-        # this loop takes each row of the B dataframe, puts the row into an array,
-        # Take the most recent row (i.e. today) and rank contents
-        # then the ranks are placed into the B_ranks dataframe, which is only one row (today)
-
-        arr_row = dfB.iloc[-1].values
-        if self.momentum == 1:
-            temp = arr_row.argsort()  # sort momentum
-        else:
-            temp = (-arr_row).argsort()[: arr_row.size]  # sort reversion
-        ranks = np.empty_like(temp)
-        ranks[temp] = np.arange(1, len(arr_row) + 1)
-        for column in range(columns):
-            dfB_ranks.iat[-1, column] = ranks[column]
-
-        dfS_ranks = self.close_price_df.copy(deep=True)
-        dfS_ranks[:] = 0
-
-        columns = dfS_ranks.shape[1]
-        rows = dfS_ranks.shape[0]
-
-        # this loop takes each row of the dfS dataframe, puts the row into an array,
-        # within the array the contents are ranked,
-        # then the ranks are placed into the dfS_ranks dataframe one by one
-        for row in range(rows):
-            arr_row = dfS.iloc[row].values
-            if self.volmomentum == 1:
-                temp = arr_row.argsort()  # sort momentum, best is highest volatility
-            else:
-                temp = (-arr_row).argsort()[
-                    : arr_row.size
-                ]  # sort reversion, best is lowest volatility
-            ranks = np.empty_like(temp)
-            ranks[temp] = np.arange(1, len(arr_row) + 1)
-            for column in range(columns):
-                dfS_ranks.iat[row, column] = ranks[column]
+        ann_volatility_ranks = self.rank_dataframe(ann_volatility)
 
         #################################################################################################################
         # Weights of the varous ranks ####################################################################################
-        dfA_ranks = dfA_ranks.multiply(self.ShortTermWeight)  # .3 default
-        dfB_ranks = dfB_ranks.multiply(self.LongTermWeight)  # .4 default
-        dfS_ranks = dfS_ranks.multiply(self.ShortTermVolatilityWeight)  # .3 default
-        dfAll_ranks = dfA_ranks.add(dfB_ranks, fill_value=0)
-        dfAll_ranks = dfAll_ranks.add(dfS_ranks, fill_value=0)
+        short_MA_ranks = short_MA_ranks.multiply(self.ShortTermWeight)  # .3 default
+        long_MA_ranks = long_MA_ranks.multiply(self.LongTermWeight)  # .4 default
+        ann_volatility_ranks = ann_volatility_ranks.multiply(
+            self.ShortTermVolatilityWeight
+        )  # .3 default
+        dfAll_ranks = short_MA_ranks.add(long_MA_ranks, fill_value=0)
+        dfAll_ranks = dfAll_ranks.add(ann_volatility_ranks, fill_value=0)
         #################################################################################################################
         #################################################################################################################
 
         # Choice is the dataframe where the ETF with the maximum score is identified
         dfChoice = self.close_price_df.copy(deep=True)
         dfChoice[:] = 0
-        rows = dfChoice.shape[0]
 
         # this loop takes each row of the All-ranks dataframe, puts the row into an array,
         # within the array the contents scanned for the maximum element
@@ -213,7 +184,9 @@ class ETFRanker:
                 # if (dfZ[dfZ.columns[max_arr_column]][row] > Zboundary): #alternative cash filter
                 dfChoice.iat[-1, max_arr_column] = 1
             else:
-                dfChoice.iat[-1, self.close_price_df.columns.get_loc(StandsForCash)] = 1
+                dfChoice.iat[
+                    -1, self.close_price_df.columns.get_loc(self.StandsForCash)
+                ] = 1
         else:
             dfChoice.iat[-1, max_arr_column] = 1
 
@@ -223,5 +196,4 @@ class ETFRanker:
 
         final_df = combine_df[-1:]
 
-        # nprint(final_df.head())
         return final_df.head()

@@ -16,23 +16,24 @@ class SharpeSurfaceGenerator:
         self,
         close_price_df: pd.DataFrame,
         adj_close_df: pd.DataFrame,
+        param_dict: dict,
         plot_portfolio_graph: bool = False,
         print_portfolio_details: bool = False,
     ):
-        self.logReturns = 0
-        self.momentum = 1
-        self.volmomentum = 0  # do not change
-        self.CashFilter = 0
-        self.MAperiods = 200  # for the cash filter
-        self.Delay = 1
-        self.ShortTermWeight = 0.3
-        self.LongTermWeight = 0.4
-        self.ShortTermVolatilityWeight = 0.4
-        self.StandsForCash = "SHY"
-        self.max_holding = 20
-        self.step_holding = 1
-        self.max_lookback = 12
-        self.step_lookback = 5
+        self.logReturns = param_dict["logReturns"]
+        self.momentum = param_dict["momentum"]
+        self.volmomentum = param_dict["volmomentum"]
+        self.CashFilter = param_dict["CashFilter"]
+        self.MAperiods = param_dict["MAperiods"]
+        self.Delay = param_dict["Delay"]
+        self.ShortTermWeight = param_dict["ShortTermWeight"]
+        self.LongTermWeight = param_dict["LongTermWeight"]
+        self.ShortTermVolatilityWeight = param_dict["ShortTermVolatilityWeight"]
+        self.StandsForCash = param_dict["StandsForCash"]
+        self.max_holding = param_dict["max_holding"]
+        self.step_holding = param_dict["step_holding"]
+        self.max_lookback = param_dict["max_lookback"]
+        self.step_lookback = param_dict["step_lookback"]
         self.plot_portfolio_graph = plot_portfolio_graph
         self.print_portfolio_details = print_portfolio_details
 

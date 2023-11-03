@@ -22,7 +22,7 @@ class SharpeSurfaceGenerator:
     ):
         self.logReturns = param_dict["logReturns"]
         self.momentum = param_dict["momentum"]
-        self.volmomentum = param_dict["volmomentum"]
+        self.volmomentum = 0 #do not change
         self.CashFilter = param_dict["CashFilter"]
         self.MAperiods = param_dict["MAperiods"]
         self.Delay = param_dict["Delay"]
@@ -344,7 +344,6 @@ class SharpeSurfaceGenerator:
                 i += 1
 
     def plot_sharpe_surface(self):
-        self.generate_sharpe_matrix()
 
         fig = plt.figure()
         ax = fig.add_subplot(projection="3d")

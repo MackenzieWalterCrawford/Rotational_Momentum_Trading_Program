@@ -62,10 +62,10 @@ class ETFRanker:
 
         """
         # Ranking each ETF w.r.t. short moving average of returns
-        ranks = self.close_price_df.copy(deep=True)
-        ranks[:] = 0
+        rank_df = self.close_price_df.copy(deep=True)
+        rank_df[:] = 0
 
-        columns = ranks.shape[1]
+        columns = rank_df.shape[1]
 
         # this loop takes each row of the A dataframe, puts the row into an array,
         # within the array the contents are ranked,
@@ -81,9 +81,9 @@ class ETFRanker:
         ranks = np.empty_like(temp)
         ranks[temp] = np.arange(1, len(arr_row) + 1)
         for column in range(columns):
-            ranks.iat[-1, column] = ranks[column]
+            rank_df.iat[-1, column] = ranks[column]
 
-        return ranks
+        return rank_df
 
     def rank_etfs(self):
         # lookbacks for longer term period and volatily
